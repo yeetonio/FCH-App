@@ -1,0 +1,16 @@
+{
+  "name": "FPS Converter Hub",
+  "short_name": "FCH",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#061522",
+  "theme_color": "#19a6ff",
+  "description": "Mobile-first FPS sensitivity converter with true aim-response visual curves.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

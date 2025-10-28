@@ -1,11 +1,10 @@
 {
-  "name": "FCH",
+  "name": "FPS Converter Hub",
   "short_name": "FCH",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#061522",
   "theme_color": "#19a6ff",
-  "description": "Fast, accurate sensitivity converter for FPS games.",
   "icons": [
     {
       "src": "icon.png",

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>FPS Converter Hub — FCH</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#19a6ff">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Splash -->
+  <div id="splash" class="splash">
+    <div class="splash-box">
+      <img src="icon.svg" alt="FCH" class="splash-icon"/>
+    </div>
+  </div>
+
+  <div id="app" class="app" aria-hidden="true">
+    <header class="header">
+      <div class="left">
+        <div class="logo">FCH</div>
+        <div>
+          <h1 class="title">FPS Converter Hub</h1>
+          <div class="sub small">Mobile-first • Controller • Log mapping + true curves</div>
+        </div>
+      </div>
+      <div class="right">
+        <button id="installBtn" class="btn-ghost small" aria-label="Install">Install</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="card">
+        <label class="small">Base Game</label>
+        <select id="src_game" class="input"></select>
+
+        <label class="small">Base Curve (default loads)</label>
+        <select id="src_curve" class="input"></select>
+
+        <div class="pair">
+          <input id="src_h" class="input half" type="number" value="7" step="any" aria-label="Horizontal sens">
+          <input id="src_v" class="input half" type="number" value="7" step="any" aria-label="Vertical sens">
+        </div>
+
+        <label class="small">FOV</label>
+        <input id="src_fov" class="input" type="number" value="90" />
+
+        <label class="small checkbox"><input id="adsToggle" type="checkbox"> Include ADS conversion</label>
+        <div id="adsFields" class="adsFields">
+          <input id="ads_src" class="input" type="text" placeholder=".80 or 80" />
+        </div>
+      </section>
+
+      <section class="card">
+        <label class="small">Target Game</label>
+        <select id="tgt_game" class="input"></select>
+
+        <div class="spacer"></div>
+        <button id="convertBtn" class="btn">Convert</button>
+        <div class="spacer"></div>
+        <button id="showGraphBtn" class="btn-ghost">Show Graph</button>
+      </section>
+
+      <section class="card">
+        <div class="row-between">
+          <strong>Conversion Output</strong>
+          <div class="small" id="modeTag">Exact Ratio-Based</div>
+        </div>
+
+        <pre id="output" class="result">Tap Convert</pre>
+
+        <button id="advToggle" class="btn-ghost">Advanced</button>
+        <div id="advPanel" class="card hidden small">
+          <div id="advContent" style="white-space:pre-wrap"></div>
+        </div>
+
+        <div id="graphWrap" class="graph-wrap hidden">
+          <canvas id="curveCanvas" width="720" height="220" aria-label="Curve visualization"></canvas>
+        </div>
+      </section>
+
+      <footer class="footer small">Made by Yeetonio — FPS Converter Hub</footer>
+    </main>
+  </div>
+
+<script src="script.js"></script>
+</body>
+</html>

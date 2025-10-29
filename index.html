@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>FPS Converter Hub — FCH</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#19a6ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- NO SPLASH ANIMATIONS (app shows immediately) -->
+  <div id="app" class="app" aria-hidden="false" style="display:block;">
+    <header class="header">
+      <div class="left">
+        <div class="logo">FCH</div>
+        <div>
+          <h1 class="title">FPS Converter Hub</h1>
+          <div class="sub small">Mobile-first • Controller • Log mapping + true curves</div>
+        </div>
+      </div>
+      <div class="right">
+        <button id="installBtn" class="btn-ghost small" aria-label="Install" style="display:none">Install</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- Base / Source -->
+      <section class="card">
+        <label class="small">Base Game</label>
+        <select id="src_game" class="input"></select>
+
+        <label class="small">Base Curve (default)</label>
+        <select id="src_curve" class="input"></select>
+
+        <div class="pair">
+          <input id="src_h" class="input half" type="number" value="7" step="any" aria-label="Horizontal sens">
+          <input id="src_v" class="input half" type="number" value="7" step="any" aria-label="Vertical sens">
+        </div>
+
+        <label class="small">FOV</label>
+        <input id="src_fov" class="input" type="number" value="90" />
+
+        <label class="small checkbox"><input id="adsToggle" type="checkbox"> Include ADS conversion</label>
+        <div id="adsFields" class="adsFields hidden">
+          <input id="ads_src" class="input" type="text" placeholder=".80 or 80" />
+        </div>
+      </section>
+
+      <!-- Target -->
+      <section class="card">
+        <label class="small">Target Game</label>
+        <select id="tgt_game" class="input"></select>
+
+        <div style="height:10px"></div>
+        <button id="convertBtn" class="btn">Convert</button>
+        <div style="height:10px"></div>
+        <button id="showGraphBtn" class="btn-ghost">Show Graph</button>
+      </section>
+
+      <!-- Output + Graph -->
+      <section class="card">
+        <div class="row-between">
+          <strong>Conversion Output</strong>
+          <div class="small" id="modeTag">Exact Ratio-Based</div>
+        </div>
+
+        <div style="height:8px"></div>
+        <pre id="output" class="result">Tap Convert</pre>
+
+        <div style="height:10px"></div>
+        <button id="advToggle" class="btn-ghost">Advanced</button>
+        <div id="advPanel" class="card hidden small">
+          <div id="advContent" style="white-space:pre-wrap"></div>
+        </div>
+
+        <div id="graphWrap" class="graph-wrap hidden">
+          <canvas id="curveCanvas" width="720" height="220" aria-label="Curve visualization"></canvas>
+        </div>
+      </section>
+
+      <footer class="footer small">Made by Yeetonio — FPS Converter Hub</footer>
+    </main>
+  </div>
+
+<!-- Full inline script: all math, curve defs, UI wiring -->
+<script>
+/* ======= DATA: games, curves, ranges (from your list) ======= */
+const GAME_CURVES = {
+  mw3:['standard','dynamic','linear'],
+  warzone:['standard','dynamic','linear'],
+  bo6:['standard','dynamic','linear'],
+  bops7:['standard','dynamic','linear'],
+  the_finals:['linear','exponential','sinusoidal'],
+  bf6:['standard','linear','bf4','bf1','bf3','bfbc','bfbc2','bfv','2042_old','stick_accel'],
+  bf2042:['standard','linear','bf4','bf1','bf3','bfbc','bfbc2','bfv','2042_old'],
+  valorant:['standard','linear','light','medium','heavy','extreme'],
+  apex:['classic','steady','fine_aim','high_velocity','linear'],
+  csgo:['standard'],
+  r6:['standard'],
+  fragpunk:['standard','linearplus'],
+  halo:['standard']
+};
+
+const CURVE_SHAPES = {
+  linear:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],
+  standard:[0,0.02,0.07,0.16,0.29,0.45,0.61,0.76,0.88,0.96,1],
+  dynamic:[0,0.01,0.04,0.09,0.18,0.30,0.48,0.70,0.88,0.97,1],
+  exponential:[0,0.006,0.02,0.07,0.16,0.33,0.57,0.79,0.92,0.98,1],
+  sinusoidal:[0,0.015,0.05,0.12,0.25,0.45,0.66,0.82,0.92,0.98,1],
+  bf4:[0,0.03,0.08,0.18,0.32,0.49,0.66,0.80,0.9,0.97,1],
+  bf1:[0,0.02,0.06,0.14,0.27,0.44,0.61,0.77,0.89,0.96,1],
+  bf3:[0,0.03,0.09,0.2,0.35,0.52,0.68,0.82,0.91,0.97,1],
+  bfbc:[0,0.025,0.07,0.16,0.3,0.48,0.66,0.8,0.9,0.97,1],
+  bfbc2:[0,0.028,0.075,0.18,0.33,0.5,0.67,0.81,0.9,0.98,1],
+  bfv:[0,0.02,0.06,0.15,0.28,0.46,0.63,0.78,0.89,0.96,1],
+  '2042_old':[0,0.005,0.02,0.06,0.14,0.32,0.55,0.78,0.92,0.98,1],
+  light:[0,0.04,0.09,0.18,0.33,0.5,0.67,0.8,0.9,0.97,1],
+  medium:[0,0.03,0.08,0.17,0.31,0.48,0.65,0.79,0.9,0.97,1],
+  heavy:[0,0.02,0.06,0.14,0.27,0.44,0.61,0.77,0.89,0.96,1],
+  classic:[0,0.03,0.09,0.18,0.31,0.48,0.65,0.8,0.9,0.97,1],
+  steady:[0,0.02,0.06,0.14,0.27,0.44,0.61,0.77,0.89,0.96,1],
+  fine_aim:[0,0.01,0.03,0.08,0.2,0.4,0.6,0.78,0.9,0.97,1],
+  high_velocity:[0,0.05,0.12,0.25,0.42,0.6,0.75,0.86,0.93,0.98,1],
+  linearplus:[0,0.04,0.11,0.21,0.34,0.5,0.66,0.79,0.9,0.97,1]
+};
+
+const GAME_RANGE = {
+  mw3:[1,20,1], warzone:[1,20,1], bf6:[1,100,0.01], bf2042:[1,100,0.01],
+  bo6:[0.1,4.0,0.05], bops7:[0.1,4.0,0.05], the_finals:[20,750,5], apex:[1,8,1],
+  fragpunk:[0.1,10.0,0.1], halo:[1,20,0.5], r6:[1,100,1], valorant:[1,10,0.01], csgo:[1,10,0.01]
+};
+
+/* ======= HELPERS & MATH ======= */
+function vecDist(a,b){let s=0;for(let i=0;i<11;i++){const d=((a[i]||0)-(b[i]||0));s+=d*d;}return Math.sqrt(s);}
+function findClosest(srcGame,srcCurve,tgtGame){ const srcArr=CURVE_SHAPES[srcCurve]||CURVE_SHAPES.linear; const candidates=GAME_CURVES[tgtGame]||['linear']; let best=null,bs=1e9; candidates.forEach(k=>{const sc=vecDist(srcArr,CURVE_SHAPES[k]||CURVE_SHAPES.linear); if(sc<bs){bs=sc;best=k;}}); return best||'linear'; }
+function logNormalize(value, game){ const r=GAME_RANGE[game]||[1,100,0.01]; const [min,max] = [r[0], r[1]]; let v = parseFloat(value) || min; v = Math.max(min, Math.min(max, v)); const lnMin = Math.log(min+1), lnMax = Math.log(max+1), lnV = Math.log(v+1); return (lnV - lnMin) / (lnMax - lnMin); }
+function logDenormalize(norm, game){ const r=GAME_RANGE[game]||[1,100,0.01]; const [min,max] = [r[0], r[1]]; const lnMin = Math.log(min+1), lnMax = Math.log(max+1); const lnV = lnMin + norm * (lnMax - lnMin); const v = Math.exp(lnV) - 1; const decimals = (max - min) < 10 ? 2 : 1; return parseFloat(Math.max(min, Math.min(max, v)).toFixed(decimals)); }
+function convertController(srcGame,tgtGame,srcSens,srcCurve,srcFov,tgtFov,ads){ const norm = logNormalize(srcSens, srcGame); const baseYaw = {mw3:205,warzone:205,bo6:205,bops7:205,bf6:158,bf2042:158,apex:190,valorant:170,csgo:210,r6:150,fragpunk:180,halo:200,the_finals:178}; const srcYaw = baseYaw[srcGame] || 180; const tgtYaw = baseYaw[tgtGame] || 180; const fovFactor = (90/srcFov) / (90/tgtFov); let tgtNorm = norm * (srcYaw/tgtYaw) * fovFactor; if(ads){let a = parseFloat(ads); if(a>1) a = a/100; tgtNorm *= a;} tgtNorm = Math.max(0, Math.min(1, tgtNorm)); const tgtSens = logDenormalize(tgtNorm, tgtGame); const closest = findClosest(srcGame, srcCurve, tgtGame); return {tgtSens, tgtNorm, closest, norm}; }
+
+/* ======= UI INIT ======= */
+const $ = id => document.getElementById(id);
+function populateGames(){ const s=$('src_game'), t=$('tgt_game'); Object.keys(GAME_CURVES).forEach(g=>{ const o=document.createElement('option'); o.value=g; o.textContent=g.toUpperCase(); s.appendChild(o); const o2=document.createElement('option'); o2.value=g; o2.textContent=g.toUpperCase(); t.appendChild(o2); }); }
+function populateCurves(game, elId){ const el=$(elId); el.innerHTML=''; (GAME_CURVES[game]||['linear']).forEach(k=>{ const o=document.createElement('option'); o.value=k; o.textContent=k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); el.appendChild(o); }); }
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  populateGames();
+  populateCurves($('src_game').value,'src_curve');
+  populateCurves($('tgt_game').value,'tgt_curve');
+  // restore last used
+  try{ const last=JSON.parse(localStorage.getItem('fps_last')||'null'); if(last){ $('src_game').value=last.src; populateCurves(last.src,'src_curve'); $('src_curve').value=last.srcCurve||$('src_curve').value; $('src_h').value=last.avg||7; $('src_v').value=last.avg||7; $('src_fov').value=last.fov||90; $('tgt_game').value=last.tgt; populateCurves(last.tgt,'tgt_curve'); }}catch(e){}
+  // show app immediately (no splash hold)
+  $('app').style.display='block';
+  $('app').removeAttribute('aria-hidden');
+});
+
+/* ======= INTERACTIONS ======= */
+$('src_game').addEventListener('change', e=> populateCurves(e.target.value,'src_curve'));
+$('tgt_game').addEventListener('change', e=> populateCurves(e.target.value,'tgt_curve'));
+$('adsToggle').addEventListener('change', e=> $('adsFields').classList.toggle('hidden', !e.target.checked));
+
+$('convertBtn').addEventListener('click', ()=>{
+  const src=$('src_game').value, tgt=$('tgt_game').value, srcCurve=$('src_curve').value;
+  const h=parseFloat($('src_h').value)||0, v=parseFloat($('src_v').value)||0, fov=parseFloat($('src_fov').value)||90;
+  const avg=(h+v)/2; const ads = $('adsToggle').checked ? $('ads_src').value : null;
+  const res = convertController(src,tgt,avg,srcCurve,fov,90,ads);
+  $('output').textContent = `Source: ${src.toUpperCase()} (${srcCurve}) — Avg ${avg}\nNormalized: ${res.norm.toFixed(4)}\nTarget: ${tgt.toUpperCase()} — Closest Curve: ${res.closest}\nSuggested Sens: ${res.tgtSens}`;
+});
+
+/* ======= GRAPH (static visual; updates when shown or when user switches curves) ======= */
+function drawSmoothCurve(arr, color='#19a6ff', alpha=1, width=3){
+  const canvas=$('curveCanvas'); const ctx=canvas.getContext('2d');
+  const W = canvas.width = Math.min(window.innerWidth * 0.95, 720);
+  const H = canvas.height = 220;
+  ctx.clearRect(0,0,W,H);
+  // background
+  ctx.fillStyle = '#04101a';
+  ctx.fillRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for(let i=0;i<=10;i++){ const x = i*(W/10); ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  // convert array (11 points) -> canvas pts
+  const pad = 18;
+  const pts = arr.map((v,i)=>({x: pad + (i/10)*(W-2*pad), y: H - pad - v*(H-2*pad)}));
+  // catmull-rom like smoothing
+  function catmull(p0,p1,p2,p3,t){
+    const t2=t*t, t3=t2*t;
+    const x = 0.5*((2*p1.x) + (-p0.x + p2.x)*t + (2*p0.x - 5*p1.x + 4*p2.x - p3.x)*t2 + (-p0.x + 3*p1.x - 3*p2.x + p3.x)*t3);
+    const y = 0.5*((2*p1.y) + (-p0.y + p2.y)*t + (2*p0.y - 5*p1.y + 4*p2.y - p3.y)*t2 + (-p0.y + 3*p1.y - 3*p2.y + p3.y)*t3);
+    return {x,y};
+  }
+  ctx.beginPath(); ctx.lineWidth = width; ctx.strokeStyle = color; ctx.globalAlpha = alpha;
+  for(let i=0;i<pts.length-1;i++){
+    const p0 = pts[Math.max(0,i-1)]; const p1 = pts[i]; const p2 = pts[i+1]; const p3 = pts[Math.min(pts.length-1,i+2)];
+    for(let t=0;t<=1;t+=0.08){
+      const p = catmull(p0,p1,p2,p3,t);
+      if(i===0 && t===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+    }
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  // markers
+  ctx.fillStyle = color;
+  [0,5,10].forEach(idx => { const p = pts[idx]; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill(); });
+}
+
+$('showGraphBtn').addEventListener('click', ()=>{
+  const g=$('graphWrap'); g.classList.toggle('hidden');
+  if(!g.classList.contains('hidden')){
+    const s = $('src_curve').value || 'linear';
+    const t = $('tgt_curve').value || 'linear';
+    const sArr = CURVE_SHAPES[s] || CURVE_SHAPES.linear;
+    const tArr = CURVE_SHAPES[t] || CURVE_SHAPES.linear;
+    // Draw source (blue) and faint target (teal)
+    drawSmoothCurve(sArr, '#19a6ff', 1, 3);
+    // overlay target with lower alpha
+    setTimeout(()=> drawSmoothCurve(tArr, '#00ffd1', 0.9, 2), 60);
+    // compute simple "curve loss" vs linear for advanced panel
+    const linear = CURVE_SHAPES.linear;
+    let loss=0; for(let i=0;i<linear.length;i++){ loss += Math.abs((sArr[i]||0)-(linear[i]||0)); }
+    $('advContent').textContent = `Source curve: ${s}\nTarget curve: ${t}\nEstimated visual deviation from linear: ${(loss*100/linear.length).toFixed(2)}%`;
+  }
+});
+
+/* redraw graph if curves change while visible */
+$('src_curve').addEventListener('change', ()=>{ if(!$('graphWrap').classList.contains('hidden')) $('showGraphBtn').click(); });
+$('tgt_curve').addEventListener('change', ()=>{ if(!$('graphWrap').classList.contains('hidden')) $('showGraphBtn').click(); });
+
+/* Advanced toggle */
+$('advToggle').addEventListener('click', ()=> $('advPanel').classList.toggle('hidden'));
+
+/* PWA install prompt handling */
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); deferredPrompt=e; $('installBtn').style.display='inline-block'; $('installBtn').addEventListener('click', async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); const {outcome} = await deferredPrompt.userChoice; deferredPrompt=null; $('installBtn').style.display='none'; }); });
+
+/* service worker registration */
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{ /* ignore */ }); }
+</script>
+
+</body>
+</html>

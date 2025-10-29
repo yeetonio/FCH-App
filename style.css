@@ -1,0 +1,75 @@
+/* style.css */
+
+/* GLOBALS */
+body {
+  background-color: #0a1a2f; /* deep navy */
+  color: #ffffff;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  text-align: center;
+}
+
+/* HEADER */
+header {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 30px;
+  letter-spacing: 1px;
+}
+
+/* DROPDOWNS + BUTTONS */
+select,
+button {
+  margin: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: none;
+  background: #1d3557;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+}
+
+select:hover,
+button:hover {
+  background: #274c7b;
+}
+
+/* GRAPH CONTAINER */
+#graphContainer {
+  margin-top: 30px;
+  width: 90%;
+  max-width: 600px;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  display: none; /* hidden until toggle */
+  justify-content: center;
+  align-items: center;
+}
+
+/* SHOW GRAPH */
+#graphContainer.active {
+  display: flex;
+}
+
+/* TEXT UPDATES */
+#sensitivityInfo {
+  margin-top: 20px;
+  font-size: 1.1rem;
+  transition: opacity 0.2s ease;
+}
+
+/* FOOTER / SMALL TEXT */
+footer {
+  font-size: 0.8rem;
+  color: #ccc;
+  margin: 40px 0 20px;
+}
